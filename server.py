@@ -6,6 +6,11 @@ import threading
 app = Flask(__name__)
 camera = Camera()
 
+# --- Origin Speicher (NEU) ---
+origin_x = None
+origin_y = None
+
+# --- API-Routen ---
 @app.route('/start_preview', methods=['POST'])
 def start_preview():
     camera.start_preview()
@@ -26,14 +31,6 @@ def get_focus_score():
     focus_score = camera.get_focus_score()
     return jsonify({'focus_score': focus_score})
 
-if __name__ == "__main__":
-    camera.initialize()
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
-
-# --- Origin Speicher ---
-origin_x = None
-origin_y = None
-
 @app.route('/set_origin', methods=['POST'])
 def set_origin():
     global origin_x, origin_y
@@ -49,3 +46,8 @@ def get_offset():
     offset_x = camera.get_current_x() - origin_x
     offset_y = camera.get_current_y() - origin_y
     return jsonify({'x_offset': offset_x, 'y_offset': offset_y})
+
+# --- Server-Start ---
+if __name__ == "__main__":
+    camera.initialize()
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
