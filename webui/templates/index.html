@@ -1,48 +1,49 @@
+<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>kTAMV Server Web-UI</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        }
-        button {
-            font-size: 18px;
-            margin: 10px;
-            padding: 10px 20px;
-        }
-        #output {
-            margin-top: 20px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-    </style>
+    <title>kTAMV Server Steuerung</title>
 </head>
-<body>
-    <h1>kTAMV-Server Web-UI</h1>
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
 
-    <button onclick="apiCall('start_preview')">Start Preview</button>
-    <button onclick="apiCall('stop_preview')">Stop Preview</button>
-    <button onclick="apiCall('find_nozzle_center')">Find Nozzle Center</button>
-    <button onclick="apiCall('set_origin')">Set Origin</button>
-    <button onclick="apiCall('get_offset', 'GET')">Get Offset</button>
+    <h1>kTAMV Server Steuerung</h1>
 
-    <div id="output"></div>
+    <button onclick="postCommand('/start_preview')">Start Preview</button>
+    <button onclick="postCommand('/stop_preview')">Stop Preview</button>
+    <br><br>
+
+    <button onclick="postCommand('/find_nozzle_center')">Nozzle zentrieren</button>
+    <br><br>
+
+    <button onclick="postCommand('/set_origin')">Origin setzen</button>
+    <br><br>
+
+    <button onclick="getOffset()">Offset abrufen</button>
+    <p id="offsetDisplay"></p>
 
     <script>
-        function apiCall(endpoint, method = 'POST') {
-            fetch(`/${endpoint}`, { method: method })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    document.getElementById('output').innerText = 'Error: ' + error;
-                });
+        async function postCommand(endpoint) {
+            try {
+                const response = await fetch(endpoint, { method: 'POST' });
+                const data = await response.json();
+                alert(JSON.stringify(data));
+            } catch (error) {
+                alert('Fehler: ' + error);
+            }
+        }
+
+        async function getOffset() {
+            try {
+                const response = await fetch('/get_offset');
+                const data = await response.json();
+                document.getElementById('offsetDisplay').innerText = 
+                    'X-Offset: ' + data.x_offset.toFixed(3) + ' | Y-Offset: ' + data.y_offset.toFixed(3);
+            } catch (error) {
+                alert('Fehler beim Abrufen des Offsets: ' + error);
+            }
         }
     </script>
+
 </body>
 </html>
