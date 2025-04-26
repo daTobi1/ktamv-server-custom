@@ -70,3 +70,10 @@ class Camera:
     def get_current_y(self):
         # Gib aktuelle Dummy-Y-Position zurück
         return self.current_y
+
+# --- Simulation leichte Abweichung bei jedem Scan ---
+import random
+
+def randomize_position(camera):
+    camera.current_x += random.uniform(-0.02, 0.02)
+    camera.current_y += random.uniform(-0.02, 0.02)
