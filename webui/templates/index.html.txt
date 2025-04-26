@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>kTAMV Server Web-UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        button {
+            font-size: 18px;
+            margin: 10px;
+            padding: 10px 20px;
+        }
+        #output {
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>kTAMV-Server Web-UI</h1>
+
+    <button onclick="apiCall('start_preview')">Start Preview</button>
+    <button onclick="apiCall('stop_preview')">Stop Preview</button>
+    <button onclick="apiCall('find_nozzle_center')">Find Nozzle Center</button>
+    <button onclick="apiCall('set_origin')">Set Origin</button>
+    <button onclick="apiCall('get_offset', 'GET')">Get Offset</button>
+
+    <div id="output"></div>
+
+    <script>
+        function apiCall(endpoint, method = 'POST') {
+            fetch(`/${endpoint}`, { method: method })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('output').innerText = 'Error: ' + error;
+                });
+        }
+    </script>
+</body>
+</html>
