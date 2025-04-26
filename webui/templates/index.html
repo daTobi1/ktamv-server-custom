@@ -2,200 +2,193 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>kTAMV Kamera-Overlay</title>
+    <title>kTAMV Server UI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #f0f0f0;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            text-align: center;
+            background-color: #f0f0f0;
         }
-        #cameraContainer {
+        h1 {
+            margin-top: 20px;
+        }
+        .button-container {
+            margin: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #camera-container {
             position: relative;
+            display: inline-block;
         }
-        #cameraStream {
-            width: 800px;
-            height: auto;
-            background: black;
+        #camera-stream {
+            width: 640px;
+            height: 480px;
+            background-color: black;
         }
         #overlay {
             position: absolute;
             top: 0;
             left: 0;
+            width: 640px;
+            height: 480px;
             pointer-events: none;
-        }
-        #controls {
-            margin-top: 20px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        button {
-            background-color: #333;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #555;
         }
     </style>
 </head>
 <body>
+    <h1>kTAMV Server UI</h1>
 
-<h1>kTAMV Server Web-UI</h1>
+    <div class="button-container">
+        <button onclick="startPreview()">Preview Starten</button>
+        <button onclick="stopPreview()">Preview Stoppen</button>
+        <button onclick="findNozzleCenter()">Find Nozzle Center</button>
+        <br><br>
+        <button onclick="moveX(-5)">X-</button>
+        <button onclick="moveX(5)">X+</button>
+        <button onclick="moveY(-5)">Y-</button>
+        <button onclick="moveY(5)">Y+</button>
+        <button onclick="resetPosition()">Reset Position</button>
+        <br><br>
+        <button onclick="toggleCrosshair()">Fadenkreuz An/Aus</button>
+        <button onclick="increaseLineWidth()">Linienstärke +</button>
+        <button onclick="decreaseLineWidth()">Linienstärke -</button>
+        <br><br>
+        <button onclick="increaseCircleSize()">Kreisgröße +</button>
+        <button onclick="decreaseCircleSize()">Kreisgröße -</button>
+        <button onclick="changeCrosshairColor()">Farbe ändern</button>
+    </div>
 
-<div id="cameraContainer">
-    <img id="cameraStream" src="http://192.168.178.110/webcam/?action=stream" alt="Kamera Stream" onload="resizeOverlay()">
-    <canvas id="overlay"></canvas>
-</div>
+    <div id="camera-container">
+        <img id="camera-stream" src="http://192.168.178.110/webcam/?action=stream" alt="Camera Stream">
+        <canvas id="overlay"></canvas>
+    </div>
 
-<div id="controls">
-    <button onclick="startPreview()">Start Preview</button>
-    <button onclick="stopPreview()">Stop Preview</button>
-    <button onclick="findNozzleCenter()">Find Nozzle Center</button>
-    <button onclick="setOrigin()">Set Origin</button>
-    <button onclick="getOffset()">Get Offset</button>
-    <button onclick="toggleCrosshair()">Fadenkreuz An/Aus</button>
-    <button onclick="changeColor()">Farbe ändern</button>
-    <button onclick="changeLineWidth(1)">Linienstärke +</button>
-    <button onclick="changeLineWidth(-1)">Linienstärke -</button>
-    <button onclick="changeCircleSize(10)">Kreis +</button>
-    <button onclick="changeCircleSize(-10)">Kreis -</button>
-    <button onclick="move('X+', 10)">X+</button>
-    <button onclick="move('X-', 10)">X-</button>
-    <button onclick="move('Y+', 10)">Y+</button>
-    <button onclick="move('Y-', 10)">Y-</button>
-    <button onclick="resetPosition()">Reset Position</button>
-</div>
+    <script>
+        let showCrosshair = true;
+        let crosshairColor = 'red';
+        let lineWidth = 2;
+        let circleRadius = 20;
+        let offsetX = 0;
+        let offsetY = 0;
 
-<script>
-    const overlay = document.getElementById('overlay');
-    const ctx = overlay.getContext('2d');
-    let showCrosshair = true;
-    let crosshairColor = "red";
-    let crosshairWidth = 2;
-    let circleDiameter = 100;
-    let offsetX = 0;
-    let offsetY = 0;
-    const colors = ["red", "green", "blue", "yellow", "white"];
-    let colorIndex = 0;
+        const overlay = document.getElementById('overlay');
+        const ctx = overlay.getContext('2d');
 
-    function resizeOverlay() {
-        const stream = document.getElementById('cameraStream');
-        overlay.width = stream.clientWidth;
-        overlay.height = stream.clientHeight;
-        draw();
-    }
+        function drawOverlay() {
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-    function draw() {
-        ctx.clearRect(0, 0, overlay.width, overlay.height);
-        if (!showCrosshair) return;
+            if (showCrosshair) {
+                const centerX = overlay.width / 2 + offsetX;
+                const centerY = overlay.height / 2 + offsetY;
 
-        const centerX = overlay.width / 2 + offsetX;
-        const centerY = overlay.height / 2 + offsetY;
+                ctx.strokeStyle = crosshairColor;
+                ctx.lineWidth = lineWidth;
 
-        ctx.strokeStyle = crosshairColor;
-        ctx.lineWidth = crosshairWidth;
+                // Fadenkreuz
+                ctx.beginPath();
+                ctx.moveTo(centerX - 20, centerY);
+                ctx.lineTo(centerX + 20, centerY);
+                ctx.moveTo(centerX, centerY - 20);
+                ctx.lineTo(centerX, centerY + 20);
+                ctx.stroke();
 
-        // Horizontale Linie
-        ctx.beginPath();
-        ctx.moveTo(0, centerY);
-        ctx.lineTo(overlay.width, centerY);
-        ctx.stroke();
-
-        // Vertikale Linie
-        ctx.beginPath();
-        ctx.moveTo(centerX, 0);
-        ctx.lineTo(centerX, overlay.height);
-        ctx.stroke();
-
-        // Kreis um das Zentrum
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, circleDiameter / 2, 0, 2 * Math.PI);
-        ctx.stroke();
-    }
-
-    function startPreview() {
-        fetch('/start_preview', { method: 'POST' });
-    }
-
-    function stopPreview() {
-        fetch('/stop_preview', { method: 'POST' });
-    }
-
-    function findNozzleCenter() {
-        fetch('/find_nozzle_center', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                alert(`Offset X: ${data.x_offset}, Offset Y: ${data.y_offset}`);
-            });
-    }
-
-    function setOrigin() {
-        fetch('/set_origin', { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                alert(`Origin gesetzt bei X: ${data.origin_x}, Y: ${data.origin_y}`);
-            });
-    }
-
-    function getOffset() {
-        fetch('/get_offset', { method: 'GET' })
-            .then(response => response.json())
-            .then(data => {
-                alert(`Offset zum Origin: X=${data.x_offset}, Y=${data.y_offset}`);
-            });
-    }
-
-    function toggleCrosshair() {
-        showCrosshair = !showCrosshair;
-        draw();
-    }
-
-    function changeColor() {
-        colorIndex = (colorIndex + 1) % colors.length;
-        crosshairColor = colors[colorIndex];
-        draw();
-    }
-
-    function changeLineWidth(delta) {
-        crosshairWidth = Math.max(1, crosshairWidth + delta);
-        draw();
-    }
-
-    function changeCircleSize(delta) {
-        circleDiameter = Math.max(10, circleDiameter + delta);
-        draw();
-    }
-
-    function move(direction, amount) {
-        switch (direction) {
-            case 'X+': offsetX += amount; break;
-            case 'X-': offsetX -= amount; break;
-            case 'Y+': offsetY -= amount; break;
-            case 'Y-': offsetY += amount; break;
+                // Kreis
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleRadius, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
         }
-        draw();
-    }
 
-    function resetPosition() {
-        offsetX = 0;
-        offsetY = 0;
-        draw();
-    }
+        function startPreview() {
+            fetch('/start_preview', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => alert('Preview gestartet!'))
+                .catch(error => alert('Fehler beim Starten des Previews'));
+        }
 
-    window.addEventListener('resize', resizeOverlay);
-</script>
+        function stopPreview() {
+            fetch('/stop_preview', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => alert('Preview gestoppt!'))
+                .catch(error => alert('Fehler beim Stoppen des Previews'));
+        }
 
+        function findNozzleCenter() {
+            fetch('/find_nozzle_center', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Nozzle Center gefunden:\nX-Offset: ' + data.x_offset.toFixed(3) + '\nY-Offset: ' + data.y_offset.toFixed(3));
+                })
+                .catch(error => alert('Fehler beim Finden des Nozzle Centers.'));
+        }
+
+        function toggleCrosshair() {
+            showCrosshair = !showCrosshair;
+            drawOverlay();
+        }
+
+        function increaseLineWidth() {
+            lineWidth += 1;
+            drawOverlay();
+        }
+
+        function decreaseLineWidth() {
+            if (lineWidth > 1) {
+                lineWidth -= 1;
+                drawOverlay();
+            }
+        }
+
+        function increaseCircleSize() {
+            circleRadius += 5;
+            drawOverlay();
+        }
+
+        function decreaseCircleSize() {
+            if (circleRadius > 5) {
+                circleRadius -= 5;
+                drawOverlay();
+            }
+        }
+
+        function changeCrosshairColor() {
+            const colors = ['red', 'green', 'blue', 'yellow', 'white'];
+            const currentIndex = colors.indexOf(crosshairColor);
+            crosshairColor = colors[(currentIndex + 1) % colors.length];
+            drawOverlay();
+        }
+
+        function moveX(value) {
+            offsetX += value;
+            drawOverlay();
+        }
+
+        function moveY(value) {
+            offsetY += value;
+            drawOverlay();
+        }
+
+        function resetPosition() {
+            offsetX = 0;
+            offsetY = 0;
+            drawOverlay();
+        }
+
+        overlay.width = 640;
+        overlay.height = 480;
+        drawOverlay();
+    </script>
 </body>
 </html>
