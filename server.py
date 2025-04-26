@@ -29,3 +29,23 @@ def get_focus_score():
 if __name__ == "__main__":
     camera.initialize()
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+
+# --- Origin Speicher ---
+origin_x = None
+origin_y = None
+
+@app.route('/set_origin', methods=['POST'])
+def set_origin():
+    global origin_x, origin_y
+    origin_x = camera.get_current_x()
+    origin_y = camera.get_current_y()
+    return jsonify({'status': 'origin set', 'origin_x': origin_x, 'origin_y': origin_y})
+
+@app.route('/get_offset', methods=['GET'])
+def get_offset():
+    global origin_x, origin_y
+    if origin_x is None or origin_y is None:
+        return jsonify({'error': 'Origin not set yet'}), 400
+    offset_x = camera.get_current_x() - origin_x
+    offset_y = camera.get_current_y() - origin_y
+    return jsonify({'x_offset': offset_x, 'y_offset': offset_y})
