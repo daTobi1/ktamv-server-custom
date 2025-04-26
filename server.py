@@ -1,16 +1,18 @@
 # server.py
+from flask import Flask, request, jsonify, render_template
 from ktamv_server.camera import Camera
-from flask import Flask, request, jsonify
 import threading
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='webui/templates')
 camera = Camera()
 
-# --- Origin Speicher (NEU) ---
 origin_x = None
 origin_y = None
 
-# --- API-Routen ---
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 @app.route('/start_preview', methods=['POST'])
 def start_preview():
     camera.start_preview()
@@ -25,11 +27,6 @@ def stop_preview():
 def find_nozzle_center():
     offset = camera.find_nozzle_center()
     return jsonify(offset)
-
-@app.route('/get_focus_score', methods=['GET'])
-def get_focus_score():
-    focus_score = camera.get_focus_score()
-    return jsonify({'focus_score': focus_score})
 
 @app.route('/set_origin', methods=['POST'])
 def set_origin():
@@ -47,7 +44,11 @@ def get_offset():
     offset_y = camera.get_current_y() - origin_y
     return jsonify({'x_offset': offset_x, 'y_offset': offset_y})
 
-# --- Server-Start ---
+@app.route('/get_focus_score', methods=['GET'])
+def get_focus_score():
+    focus_score = camera.get_focus_score()
+    return jsonify({'focus_score': focus_score})
+
 if __name__ == "__main__":
     camera.initialize()
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
