@@ -75,6 +75,7 @@
     <button onclick="move('X-', 10)">X-</button>
     <button onclick="move('Y+', 10)">Y+</button>
     <button onclick="move('Y-', 10)">Y-</button>
+    <button onclick="resetPosition()">Reset Position</button>
 </div>
 
 <script>
@@ -184,6 +185,12 @@
             case 'Y+': offsetY -= amount; break;
             case 'Y-': offsetY += amount; break;
         }
+        draw();
+    }
+
+    function resetPosition() {
+        offsetX = 0;
+        offsetY = 0;
         draw();
     }
 
