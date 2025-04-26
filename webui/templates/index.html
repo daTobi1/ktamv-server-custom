@@ -14,39 +14,24 @@
         }
         #cameraContainer {
             position: relative;
+            display: inline-block;
         }
         #cameraStream {
-            max-width: 100%;
+            max-width: 100vw;
             height: auto;
+            display: block;
         }
-        .crosshair, .center-circle {
+        #overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
             pointer-events: none;
-        }
-        .vertical {
-            width: 2px;
-            height: 100vh;
-            background-color: red;
-        }
-        .horizontal {
-            width: 100vw;
-            height: 2px;
-            background-color: red;
-        }
-        .center-circle {
-            width: 100px;
-            height: 100px;
-            border: 2px solid red;
-            border-radius: 50%;
         }
         #controls {
             margin-top: 10px;
             display: flex;
-            gap: 10px;
             flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
         }
         button {
@@ -59,66 +44,101 @@
 <body>
 
 <div id="cameraContainer">
-    <img id="cameraStream" src="http://192.168.178.110/webcam/?action=stream" alt="Kamera Stream">
-    <div id="crosshair" class="crosshair">
-        <div class="vertical"></div>
-        <div class="horizontal"></div>
-    </div>
-    <div id="centerCircle" class="center-circle"></div>
+    <img id="cameraStream" src="http://192.168.178.110/webcam/?action=stream" alt="Kamera Stream" onload="resizeOverlay()">
+    <canvas id="overlay"></canvas>
 </div>
 
 <div id="controls">
+    <button onclick="move('X+', 10)">X+</button>
+    <button onclick="move('X-', 10)">X-</button>
+    <button onclick="move('Y+', 10)">Y+</button>
+    <button onclick="move('Y-', 10)">Y-</button>
     <button onclick="toggleCrosshair()">Fadenkreuz An/Aus</button>
     <button onclick="changeColor()">Farbe ändern</button>
-    <button onclick="changeLineWidth(1)">Linie +</button>
-    <button onclick="changeLineWidth(-1)">Linie -</button>
+    <button onclick="changeLineWidth(1)">Linienstärke +</button>
+    <button onclick="changeLineWidth(-1)">Linienstärke -</button>
     <button onclick="changeCircleSize(10)">Kreis +</button>
     <button onclick="changeCircleSize(-10)">Kreis -</button>
 </div>
 
 <script>
-    let crosshairVisible = true;
-    let colors = ["red", "green", "blue", "yellow", "white"];
-    let currentColorIndex = 0;
-    let lineWidth = 2;
+    const overlay = document.getElementById('overlay');
+    const ctx = overlay.getContext('2d');
+    let showCrosshair = true;
+    let crosshairColor = "red";
+    let crosshairWidth = 2;
     let circleDiameter = 100;
+    let offsetX = 0;
+    let offsetY = 0;
+    const colors = ["red", "green", "blue", "yellow", "white"];
+    let colorIndex = 0;
+
+    function resizeOverlay() {
+        overlay.width = document.getElementById('cameraStream').clientWidth;
+        overlay.height = document.getElementById('cameraStream').clientHeight;
+        draw();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        if (!showCrosshair) return;
+
+        const centerX = overlay.width / 2 + offsetX;
+        const centerY = overlay.height / 2 + offsetY;
+
+        ctx.strokeStyle = crosshairColor;
+        ctx.lineWidth = crosshairWidth;
+
+        // Vertikale Linie
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, overlay.height);
+        ctx.stroke();
+
+        // Horizontale Linie
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(overlay.width, centerY);
+        ctx.stroke();
+
+        // Kreis in der Mitte
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, circleDiameter / 2, 0, 2 * Math.PI);
+        ctx.stroke();
+    }
 
     function toggleCrosshair() {
-        crosshairVisible = !crosshairVisible;
-        document.getElementById('crosshair').style.display = crosshairVisible ? 'block' : 'none';
-        document.getElementById('centerCircle').style.display = crosshairVisible ? 'block' : 'none';
+        showCrosshair = !showCrosshair;
+        draw();
     }
 
     function changeColor() {
-        currentColorIndex = (currentColorIndex + 1) % colors.length;
-        const color = colors[currentColorIndex];
-        document.querySelector('.vertical').style.backgroundColor = color;
-        document.querySelector('.horizontal').style.backgroundColor = color;
-        document.getElementById('centerCircle').style.borderColor = color;
+        colorIndex = (colorIndex + 1) % colors.length;
+        crosshairColor = colors[colorIndex];
+        draw();
     }
 
-    function changeLineWidth(amount) {
-        lineWidth += amount;
-        if (lineWidth < 1) lineWidth = 1;
-        if (lineWidth > 20) lineWidth = 20;
-
-        const vertical = document.querySelector('.vertical');
-        const horizontal = document.querySelector('.horizontal');
-        const circle = document.getElementById('centerCircle');
-
-        vertical.style.width = lineWidth + 'px';
-        horizontal.style.height = lineWidth + 'px';
-        circle.style.borderWidth = lineWidth + 'px'; // <-- Kreislinie wird auch geändert
+    function changeLineWidth(delta) {
+        crosshairWidth = Math.max(1, crosshairWidth + delta);
+        draw();
     }
 
-    function changeCircleSize(amount) {
-        circleDiameter += amount;
-        if (circleDiameter < 10) circleDiameter = 10;
-        if (circleDiameter > 1000) circleDiameter = 1000;
-        const circle = document.getElementById('centerCircle');
-        circle.style.width = circleDiameter + 'px';
-        circle.style.height = circleDiameter + 'px';
+    function changeCircleSize(delta) {
+        circleDiameter = Math.max(10, circleDiameter + delta);
+        draw();
     }
+
+    function move(direction, amount) {
+        switch (direction) {
+            case 'X+': offsetX += amount; break;
+            case 'X-': offsetX -= amount; break;
+            case 'Y+': offsetY -= amount; break;
+            case 'Y-': offsetY += amount; break;
+        }
+        draw();
+    }
+
+    window.addEventListener('resize', resizeOverlay);
 </script>
 
 </body>
