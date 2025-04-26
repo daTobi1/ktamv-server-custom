@@ -36,3 +36,37 @@ class Camera:
         if not ret:
             return -1
         return calculate_focus(frame)
+
+# Dummy-Position für Tests
+import random
+
+class Camera:
+    def __init__(self):
+        self.preview_running = False
+        self.current_x = 42.32
+        self.current_y = -30.85
+
+    def initialize(self):
+        pass
+
+    def start_preview(self):
+        self.preview_running = True
+
+    def stop_preview(self):
+        self.preview_running = False
+
+    def find_nozzle_center(self):
+        # Hier würdest du echtes Bildverarbeitungs-Offset berechnen
+        return {"x_offset": 0.0, "y_offset": 0.0}
+
+    def get_focus_score(self):
+        # Einfacher Dummy-Fokuswert
+        return random.uniform(0, 100)
+
+    def get_current_x(self):
+        # Gib aktuelle Dummy-X-Position zurück
+        return self.current_x
+
+    def get_current_y(self):
+        # Gib aktuelle Dummy-Y-Position zurück
+        return self.current_y
