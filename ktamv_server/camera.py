@@ -1,61 +1,51 @@
-# ktamv_server/camera.py
-
-import random
-import time
+# camera.py
+import cv2
 
 class Camera:
     def __init__(self):
+        self.capture = None
         self.preview_running = False
-        self.current_x = 42.32
-        self.current_y = -30.85
-        self.origin_x = None
-        self.origin_y = None
+        self.simulated_x = 42.32
+        self.simulated_y = -30.85
 
     def initialize(self):
-        print("[kTAMV] Kamera-Server initialisiert.")
+        self.capture = cv2.VideoCapture(0)
 
     def start_preview(self):
         if not self.preview_running:
             self.preview_running = True
-            print("[kTAMV] Kamera-Vorschau gestartet.")
+            threading.Thread(target=self._preview_loop, daemon=True).start()
 
     def stop_preview(self):
-        if self.preview_running:
-            self.preview_running = False
-            print("[kTAMV] Kamera-Vorschau gestoppt.")
+        self.preview_running = False
+
+    def _preview_loop(self):
+        while self.preview_running:
+            ret, frame = self.capture.read()
+            if ret:
+                cv2.imshow('Preview', frame)
+                if cv2.waitKey(1) == 27:
+                    break
+        cv2.destroyAllWindows()
 
     def find_nozzle_center(self):
-        self._simulate_position_change()
-        print(f"[kTAMV] Aktuelle simulierte Position: X={self.current_x:.3f} Y={self.current_y:.3f}")
+        # Simulation der Düse in der Mitte
         return {"x_offset": 0.0, "y_offset": 0.0}
 
     def get_focus_score(self):
-        focus_score = random.uniform(0.8, 1.0)
-        print(f"[kTAMV] Aktueller Focus-Score: {focus_score:.3f}")
-        return focus_score
-
-    def set_origin(self):
-        self.origin_x = self.current_x
-        self.origin_y = self.current_y
-        print(f"[kTAMV] Ursprung gesetzt auf X={self.origin_x:.3f} Y={self.origin_y:.3f}")
-
-    def get_offset(self):
-        if self.origin_x is None or self.origin_y is None:
-            raise ValueError("[kTAMV] Ursprung nicht gesetzt.")
-        offset_x = self.current_x - self.origin_x
-        offset_y = self.current_y - self.origin_y
-        print(f"[kTAMV] Offset berechnet: X={offset_x:.3f} Y={offset_y:.3f}")
-        return {"x_offset": offset_x, "y_offset": offset_y}
+        ret, frame = self.capture.read()
+        if ret:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            fm = cv2.Laplacian(gray, cv2.CV_64F).var()
+            return fm
+        return 0.0
 
     def get_current_x(self):
-        return self.current_x
+        return self.simulated_x
 
     def get_current_y(self):
-        return self.current_y
+        return self.simulated_y
 
-    def _simulate_position_change(self):
-        # Simuliert eine minimale Veränderung der aktuellen Position (0.001 bis 0.01mm)
-        delta_x = random.uniform(-0.01, 0.01)
-        delta_y = random.uniform(-0.01, 0.01)
-        self.current_x += delta_x
-        self.current_y += delta_y
+    def move_relative(self, dx, dy):
+        self.simulated_x += dx
+        self.simulated_y += dy
