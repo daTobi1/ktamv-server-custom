@@ -2,171 +2,124 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>kTAMV Server Web-UI</title>
+    <title>kTAMV Kamera-Overlay</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
-        button, select { padding: 10px 20px; margin: 10px; font-size: 16px; }
-        .movement-buttons { margin-top: 30px; }
-        .movement-buttons button { width: 80px; margin: 5px; }
-        .camera-container { position: relative; display: inline-block; }
-        img { margin-top: 20px; max-width: 90%; height: auto; border: 2px solid #444; border-radius: 8px; }
-        .crosshair {
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #cameraContainer {
+            position: relative;
+        }
+        #cameraStream {
+            max-width: 100%;
+            height: auto;
+        }
+        .crosshair, .center-circle {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-        }
-        .crosshair-line {
-            position: absolute;
-            background: red;
-        }
-        .vertical {
-            width: 2px;
-            height: 100%;
-            left: 50%;
-            top: 0;
-            transform: translateX(-50%);
-        }
-        .horizontal {
-            height: 2px;
-            width: 100%;
             top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-        }
-        .circle {
-            position: absolute;
-            border: 2px solid red;
-            border-radius: 50%;
-            width: 100px;
-            height: 100px;
             left: 50%;
-            top: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
         }
-        .hidden { display: none; }
+        .vertical {
+            width: 2px;
+            height: 100vh;
+            background-color: red;
+        }
+        .horizontal {
+            width: 100vw;
+            height: 2px;
+            background-color: red;
+        }
+        .center-circle {
+            width: 100px;
+            height: 100px;
+            border: 2px solid red;
+            border-radius: 50%;
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <h1>kTAMV Server Steuerung</h1>
 
-    <div>
-        <button onclick="sendCommand('start_preview')">Preview starten</button>
-        <button onclick="sendCommand('stop_preview')">Preview stoppen</button>
-        <button onclick="sendCommand('find_nozzle_center')">Nozzle Center finden</button>
-        <button onclick="sendCommand('set_origin')">Origin setzen</button>
-        <button onclick="sendCommand('get_offset')">Offset abrufen</button>
+<div id="cameraContainer">
+    <img id="cameraStream" src="http://192.168.178.110/webcam/?action=stream" alt="Kamera Stream">
+    <div id="crosshair" class="crosshair">
+        <div class="vertical"></div>
+        <div class="horizontal"></div>
     </div>
+    <div id="centerCircle" class="center-circle"></div>
+</div>
 
-    <div style="margin-top:20px;">
-        <button onclick="toggleCrosshair()">Fadenkreuz an/aus</button>
+<div id="controls">
+    <button onclick="toggleCrosshair()">Fadenkreuz An/Aus</button>
+    <button onclick="changeColor()">Farbe ändern</button>
+    <button onclick="changeLineWidth(1)">Linie +</button>
+    <button onclick="changeLineWidth(-1)">Linie -</button>
+    <button onclick="changeCircleSize(10)">Kreis +</button>
+    <button onclick="changeCircleSize(-10)">Kreis -</button>
+</div>
 
-        <select id="colorPicker" onchange="changeCrosshairColor()">
-            <option value="red">Rot</option>
-            <option value="green">Grün</option>
-            <option value="blue">Blau</option>
-            <option value="white">Weiß</option>
-            <option value="yellow">Gelb</option>
-            <option value="cyan">Cyan</option>
-            <option value="magenta">Magenta</option>
-        </select>
+<script>
+    let crosshairVisible = true;
+    let colors = ["red", "green", "blue", "yellow", "white"];
+    let currentColorIndex = 0;
+    let lineWidth = 2;
+    let circleDiameter = 100;
 
-        <div style="margin-top:10px;">
-            <button onclick="changeCircleSize(-10)">Kreis -</button>
-            <button onclick="changeCircleSize(10)">Kreis +</button>
-        </div>
+    function toggleCrosshair() {
+        crosshairVisible = !crosshairVisible;
+        document.getElementById('crosshair').style.display = crosshairVisible ? 'block' : 'none';
+        document.getElementById('centerCircle').style.display = crosshairVisible ? 'block' : 'none';
+    }
 
-        <div style="margin-top:10px;">
-            <button onclick="changeLineWidth(-1)">Linie -</button>
-            <button onclick="changeLineWidth(1)">Linie +</button>
-        </div>
-    </div>
+    function changeColor() {
+        currentColorIndex = (currentColorIndex + 1) % colors.length;
+        const color = colors[currentColorIndex];
+        document.querySelector('.vertical').style.backgroundColor = color;
+        document.querySelector('.horizontal').style.backgroundColor = color;
+        document.getElementById('centerCircle').style.borderColor = color;
+    }
 
-    <div class="movement-buttons">
-        <h2>Manuelle Bewegung (Simulation)</h2>
-        <div>
-            <button onclick="move('Y+', 1)">Y+</button>
-        </div>
-        <div>
-            <button onclick="move('X-', 1)">X-</button>
-            <button onclick="move('X+', 1)">X+</button>
-        </div>
-        <div>
-            <button onclick="move('Y-', 1)">Y-</button>
-        </div>
-    </div>
+    function changeLineWidth(amount) {
+        lineWidth += amount;
+        if (lineWidth < 1) lineWidth = 1;
+        if (lineWidth > 20) lineWidth = 20;
 
-    <div id="response" style="margin-top:20px;"></div>
+        const vertical = document.querySelector('.vertical');
+        const horizontal = document.querySelector('.horizontal');
+        const circle = document.getElementById('centerCircle');
 
-    <h2>Live Kamera Stream</h2>
-    <div class="camera-container">
-        <img src="http://192.168.178.110/webcam/?action=stream" alt="Live Kamera Stream">
-        <div id="crosshair" class="crosshair hidden">
-            <div class="crosshair-line vertical"></div>
-            <div class="crosshair-line horizontal"></div>
-            <div class="circle" id="centerCircle"></div>
-        </div>
-    </div>
+        vertical.style.width = lineWidth + 'px';
+        horizontal.style.height = lineWidth + 'px';
+        circle.style.borderWidth = lineWidth + 'px'; // <-- Kreislinie wird auch geändert
+    }
 
-    <script>
-        let x = 0;
-        let y = 0;
-        let crosshairVisible = false;
-        let circleSize = 100;
-        let lineWidth = 2;
+    function changeCircleSize(amount) {
+        circleDiameter += amount;
+        if (circleDiameter < 10) circleDiameter = 10;
+        if (circleDiameter > 1000) circleDiameter = 1000;
+        const circle = document.getElementById('centerCircle');
+        circle.style.width = circleDiameter + 'px';
+        circle.style.height = circleDiameter + 'px';
+    }
+</script>
 
-        function sendCommand(command) {
-            let method = (command === 'get_offset') ? 'GET' : 'POST';
-            fetch('http://192.168.178.152:5000/' + command, { method: method })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('response').innerText = JSON.stringify(data, null, 2);
-                })
-                .catch(error => {
-                    document.getElementById('response').innerText = 'Fehler: ' + error;
-                });
-        }
-
-        function move(direction, step) {
-            if (direction === 'X+') x += step;
-            if (direction === 'X-') x -= step;
-            if (direction === 'Y+') y += step;
-            if (direction === 'Y-') y -= step;
-            document.getElementById('response').innerText = `Simulierte Position: X=${x} Y=${y}`;
-        }
-
-        function toggleCrosshair() {
-            const crosshair = document.getElementById('crosshair');
-            crosshairVisible = !crosshairVisible;
-            crosshair.className = crosshairVisible ? 'crosshair' : 'crosshair hidden';
-        }
-
-        function changeCrosshairColor() {
-            const color = document.getElementById('colorPicker').value;
-            const lines = document.querySelectorAll('.crosshair-line');
-            const circle = document.getElementById('centerCircle');
-            lines.forEach(line => {
-                line.style.background = color;
-            });
-            circle.style.borderColor = color;
-        }
-
-        function changeCircleSize(amount) {
-            circleSize += amount;
-            if (circleSize < 20) circleSize = 20;
-            const circle = document.getElementById('centerCircle');
-            circle.style.width = circleSize + 'px';
-            circle.style.height = circleSize + 'px';
-        }
-
-        function changeLineWidth(amount) {
-            lineWidth += amount;
-            if (lineWidth < 1) lineWidth = 1;
-            if (lineWidth > 20) lineWidth = 20;
-            document.querySelector('.vertical').style.width = lineWidth + 'px';
-            document.querySelector('.horizontal').style.height = lineWidth + 'px';
-        }
-    </script>
 </body>
 </html>
