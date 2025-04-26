@@ -1,79 +1,68 @@
-# camera.py
 import cv2
-import numpy as np
-from ktamv_server.focus_detection import calculate_focus
+import threading
+import random
 
 class Camera:
     def __init__(self):
-        self.cap = None
+        self.capture = None
+        self.preview_thread = None
+        self.running = False
+        self.current_x = 42.32  # Startposition X
+        self.current_y = -30.85  # Startposition Y
 
     def initialize(self):
-        self.cap = cv2.VideoCapture(0)
+        self.capture = cv2.VideoCapture(0)
+        if not self.capture.isOpened():
+            print("Fehler: Kamera konnte nicht geöffnet werden.")
 
     def start_preview(self):
-        if not self.cap.isOpened():
+        if self.capture is None:
             self.initialize()
-        while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                break
-            cv2.imshow('Preview', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        self.stop_preview()
+        if self.running:
+            return
+
+        self.running = True
+        self.preview_thread = threading.Thread(target=self._preview_loop)
+        self.preview_thread.start()
 
     def stop_preview(self):
-        if self.cap:
-            self.cap.release()
+        self.running = False
+        if self.preview_thread is not None:
+            self.preview_thread.join()
+
+    def _preview_loop(self):
+        while self.running:
+            ret, frame = self.capture.read()
+            if ret:
+                cv2.imshow("Camera Preview", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
         cv2.destroyAllWindows()
 
     def find_nozzle_center(self):
-        # Beispiel (Dummy) Offset
-        return {'x_offset': 0.0, 'y_offset': 0.0}
-
-    def get_focus_score(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            return -1
-        return calculate_focus(frame)
-
-# Dummy-Position für Tests
-import random
-
-class Camera:
-    def __init__(self):
-        self.preview_running = False
-        self.current_x = 42.32
-        self.current_y = -30.85
-
-    def initialize(self):
-        pass
-
-    def start_preview(self):
-        self.preview_running = True
-
-    def stop_preview(self):
-        self.preview_running = False
-
-    def find_nozzle_center(self):
-        # Hier würdest du echtes Bildverarbeitungs-Offset berechnen
+        self._simulate_position_change()
         return {"x_offset": 0.0, "y_offset": 0.0}
 
     def get_focus_score(self):
-        # Einfacher Dummy-Fokuswert
-        return random.uniform(0, 100)
+        if self.capture is None:
+            self.initialize()
+        ret, frame = self.capture.read()
+        if not ret:
+            return 0
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        return cv2.Laplacian(gray, cv2.CV_64F).var()
 
     def get_current_x(self):
-        # Gib aktuelle Dummy-X-Position zurück
         return self.current_x
 
     def get_current_y(self):
-        # Gib aktuelle Dummy-Y-Position zurück
         return self.current_y
 
-# --- Simulation leichte Abweichung bei jedem Scan ---
-import random
-
-def randomize_position(camera):
-    camera.current_x += random.uniform(-0.02, 0.02)
-    camera.current_y += random.uniform(-0.02, 0.02)
+    def _simulate_position_change(self):
+        """Simuliere minimale Bewegung bei jedem Nozzle-Find-Aufruf."""
+        if self.current_x is None:
+            self.current_x = 42.32
+        if self.current_y is None:
+            self.current_y = -30.85
+        self.current_x += random.uniform(-0.05, 0.05)  # ±0.05 mm
+        self.current_y += random.uniform(-0.05, 0.05)
