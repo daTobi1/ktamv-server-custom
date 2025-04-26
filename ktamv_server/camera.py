@@ -1,51 +1,61 @@
-# camera.py
+# ktamv_server/camera.py
+
 import cv2
 
 class Camera:
     def __init__(self):
         self.capture = None
         self.preview_running = False
-        self.simulated_x = 42.32
-        self.simulated_y = -30.85
+        self.origin_x = None
+        self.origin_y = None
+        self.current_x = 42.32  # Simulierter Startwert
+        self.current_y = -30.85  # Simulierter Startwert
 
     def initialize(self):
-        self.capture = cv2.VideoCapture(0)
+        # Verbindung zu deinem Crowsnest MJPG-Stream
+        self.capture = cv2.VideoCapture("http://192.168.178.110/webcam/?action=stream")
 
     def start_preview(self):
-        if not self.preview_running:
-            self.preview_running = True
-            threading.Thread(target=self._preview_loop, daemon=True).start()
+        self.preview_running = True
+        # Hier könnte man erweitern für eine Live-Anzeige
 
     def stop_preview(self):
         self.preview_running = False
-
-    def _preview_loop(self):
-        while self.preview_running:
-            ret, frame = self.capture.read()
-            if ret:
-                cv2.imshow('Preview', frame)
-                if cv2.waitKey(1) == 27:
-                    break
-        cv2.destroyAllWindows()
+        if self.capture:
+            self.capture.release()
 
     def find_nozzle_center(self):
-        # Simulation der Düse in der Mitte
-        return {"x_offset": 0.0, "y_offset": 0.0}
+        if not self.capture or not self.capture.isOpened():
+            return {"x_offset": 0.0, "y_offset": 0.0}
+
+        ret, frame = self.capture.read()
+        if not ret:
+            return {"x_offset": 0.0, "y_offset": 0.0}
+
+        # Simulation: Einfach kleine zufällige Versätze
+        self.current_x += 0.05
+        self.current_y += 0.03
+        return {"x_offset": self.current_x - (self.origin_x or 0), "y_offset": self.current_y - (self.origin_y or 0)}
 
     def get_focus_score(self):
-        ret, frame = self.capture.read()
-        if ret:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            fm = cv2.Laplacian(gray, cv2.CV_64F).var()
-            return fm
-        return 0.0
+        if not self.capture or not self.capture.isOpened():
+            return 0.0
 
+        ret, frame = self.capture.read()
+        if not ret:
+            return 0.0
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        focus_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+        return focus_score
+
+    # --- Position & Origin Simulation ---
     def get_current_x(self):
-        return self.simulated_x
+        return self.current_x
 
     def get_current_y(self):
-        return self.simulated_y
+        return self.current_y
 
-    def move_relative(self, dx, dy):
-        self.simulated_x += dx
-        self.simulated_y += dy
+    def set_origin(self):
+        self.origin_x = self.current_x
+        self.origin_y = self.current_y
