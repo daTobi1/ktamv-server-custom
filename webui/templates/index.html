@@ -1,49 +1,75 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>kTAMV Server Steuerung</title>
+    <title>kTAMV Server Web-UI</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        img { margin-top: 20px; max-width: 90%; height: auto; border: 2px solid #444; border-radius: 8px; }
+        .movement-buttons {
+            margin-top: 30px;
+        }
+        .movement-buttons button {
+            width: 80px;
+            margin: 5px;
+        }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
-
+<body>
     <h1>kTAMV Server Steuerung</h1>
 
-    <button onclick="postCommand('/start_preview')">Start Preview</button>
-    <button onclick="postCommand('/stop_preview')">Stop Preview</button>
-    <br><br>
+    <div>
+        <button onclick="sendCommand('start_preview')">Preview starten</button>
+        <button onclick="sendCommand('stop_preview')">Preview stoppen</button>
+        <button onclick="sendCommand('find_nozzle_center')">Nozzle Center finden</button>
+        <button onclick="sendCommand('set_origin')">Origin setzen</button>
+        <button onclick="sendCommand('get_offset')">Offset abrufen</button>
+    </div>
 
-    <button onclick="postCommand('/find_nozzle_center')">Nozzle zentrieren</button>
-    <br><br>
+    <div class="movement-buttons">
+        <h2>Manuelle Bewegung (Simulation)</h2>
+        <div>
+            <button onclick="move('Y+', 1)">Y+</button>
+        </div>
+        <div>
+            <button onclick="move('X-', 1)">X-</button>
+            <button onclick="move('X+', 1)">X+</button>
+        </div>
+        <div>
+            <button onclick="move('Y-', 1)">Y-</button>
+        </div>
+    </div>
 
-    <button onclick="postCommand('/set_origin')">Origin setzen</button>
-    <br><br>
+    <div id="response" style="margin-top:20px;"></div>
 
-    <button onclick="getOffset()">Offset abrufen</button>
-    <p id="offsetDisplay"></p>
+    <h2>Live Kamera Stream</h2>
+    <img src="http://192.168.178.110/webcam/?action=stream" alt="Live Kamera Stream">
 
     <script>
-        async function postCommand(endpoint) {
-            try {
-                const response = await fetch(endpoint, { method: 'POST' });
-                const data = await response.json();
-                alert(JSON.stringify(data));
-            } catch (error) {
-                alert('Fehler: ' + error);
-            }
+        let x = 0;
+        let y = 0;
+
+        function sendCommand(command) {
+            let method = (command === 'get_offset') ? 'GET' : 'POST';
+            fetch('http://192.168.178.152:5000/' + command, { method: method })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('response').innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    document.getElementById('response').innerText = 'Fehler: ' + error;
+                });
         }
 
-        async function getOffset() {
-            try {
-                const response = await fetch('/get_offset');
-                const data = await response.json();
-                document.getElementById('offsetDisplay').innerText = 
-                    'X-Offset: ' + data.x_offset.toFixed(3) + ' | Y-Offset: ' + data.y_offset.toFixed(3);
-            } catch (error) {
-                alert('Fehler beim Abrufen des Offsets: ' + error);
-            }
+        function move(direction, step) {
+            if (direction === 'X+') x += step;
+            if (direction === 'X-') x -= step;
+            if (direction === 'Y+') y += step;
+            if (direction === 'Y-') y -= step;
+
+            document.getElementById('response').innerText = `Simulierte Position: X=${x} Y=${y}`;
         }
     </script>
-
 </body>
 </html>
