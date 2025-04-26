@@ -5,15 +5,39 @@
     <title>kTAMV Server Web-UI</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
-        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        button, select { padding: 10px 20px; margin: 10px; font-size: 16px; }
         img { margin-top: 20px; max-width: 90%; height: auto; border: 2px solid #444; border-radius: 8px; }
-        .movement-buttons {
-            margin-top: 30px;
+        .movement-buttons { margin-top: 30px; }
+        .movement-buttons button { width: 80px; margin: 5px; }
+        .camera-container { position: relative; display: inline-block; }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
-        .movement-buttons button {
-            width: 80px;
-            margin: 5px;
+        .crosshair:before, .crosshair:after {
+            content: '';
+            position: absolute;
+            background: red; /* Standardfarbe */
         }
+        .crosshair:before {
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            transform: translateX(-50%);
+        }
+        .crosshair:after {
+            top: 50%;
+            left: 0;
+            height: 2px;
+            width: 100%;
+            transform: translateY(-50%);
+        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -25,6 +49,16 @@
         <button onclick="sendCommand('find_nozzle_center')">Nozzle Center finden</button>
         <button onclick="sendCommand('set_origin')">Origin setzen</button>
         <button onclick="sendCommand('get_offset')">Offset abrufen</button>
+        <button onclick="toggleCrosshair()">Fadenkreuz an/aus</button>
+        <select id="colorPicker" onchange="changeCrosshairColor()">
+            <option value="red">Rot</option>
+            <option value="green">Grün</option>
+            <option value="blue">Blau</option>
+            <option value="white">Weiß</option>
+            <option value="yellow">Gelb</option>
+            <option value="cyan">Cyan</option>
+            <option value="magenta">Magenta</option>
+        </select>
     </div>
 
     <div class="movement-buttons">
@@ -44,11 +78,15 @@
     <div id="response" style="margin-top:20px;"></div>
 
     <h2>Live Kamera Stream</h2>
-    <img src="http://192.168.178.110/webcam/?action=stream" alt="Live Kamera Stream">
+    <div class="camera-container">
+        <img src="http://192.168.178.110/webcam/?action=stream" alt="Live Kamera Stream">
+        <div id="crosshair" class="crosshair hidden"></div>
+    </div>
 
     <script>
         let x = 0;
         let y = 0;
+        let crosshairVisible = false;
 
         function sendCommand(command) {
             let method = (command === 'get_offset') ? 'GET' : 'POST';
@@ -67,8 +105,22 @@
             if (direction === 'X-') x -= step;
             if (direction === 'Y+') y += step;
             if (direction === 'Y-') y -= step;
-
             document.getElementById('response').innerText = `Simulierte Position: X=${x} Y=${y}`;
+        }
+
+        function toggleCrosshair() {
+            const crosshair = document.getElementById('crosshair');
+            crosshairVisible = !crosshairVisible;
+            crosshair.className = crosshairVisible ? 'crosshair' : 'crosshair hidden';
+        }
+
+        function changeCrosshairColor() {
+            const color = document.getElementById('colorPicker').value;
+            const crosshair = document.getElementById('crosshair');
+            crosshair.style.setProperty('--crosshair-color', color);
+
+            crosshair.querySelector(':before').style.background = color;
+            crosshair.querySelector(':after').style.background = color;
         }
     </script>
 </body>
