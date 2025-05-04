@@ -1,1 +1,0 @@
-# Placeholder für zukünftige nozzle detection utils
