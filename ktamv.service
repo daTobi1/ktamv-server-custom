@@ -1,0 +1,11 @@
+[Unit]
+Description=kTAMV Server
+After=network.target
+
+[Service]
+ExecStart=/root/ktamv-server-custom/start_server.sh
+WorkingDirectory=/root/ktamv-server-custom
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
